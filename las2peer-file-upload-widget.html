@@ -1,0 +1,321 @@
+<link rel="import" href="../polymer/polymer.html">
+
+<link rel="import" href="../iron-ajax/iron-ajax.html">
+<link rel="import" href="../paper-dialog/paper-dialog.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../iron-form/iron-form.html">
+<link rel="import" href="../paper-input/paper-input.html">
+<link rel="import" href="../paper-input/paper-textarea.html">
+<link rel="import" href="../paper-toggle-button/paper-toggle-button.html">
+<link rel="import" href="../paper-button/paper-button.html">
+
+
+<!--
+Provides an upload form for the las2peer file service.
+
+Example:
+
+    <las2peer-file-upload-widget base-url="http://your-node-hostname:your-webconnector-port/"></las2peer-file-upload-widget>
+
+
+Simplified example only with file input input, identifier and upload button:
+
+    <las2peer-file-upload-widget base-url="http://your-node-hostname:your-webconnector-port/" label-share-with-group="" label-description="" label-exclude-from-index=""></las2peer-file-upload-widget>
+
+Example with custom success callback function:
+
+    <las2peer-file-upload-widget id="uploadwidget" upload-success-callback="uploadSuccess"></las2peer-file-upload-widget>
+    ...
+    <script>
+        function uploadSuccess(fileurl) {
+            alert('File upload to ' + fileurl + ' successful');
+        }
+    </script>
+
+@demo demo/index.html
+-->
+
+<dom-module id="las2peer-file-upload-widget">
+  <template>
+
+    <iron-ajax id="ajaxUploadFile"
+        url='[[serviceUrl]]/files'
+        method='POST'
+        params='{}'
+        handle-as="text"
+        on-response="_receiveFileUpload"
+        on-error="_handleError"
+        headers = '[[_requestHeaders]]'
+        loading = "{{_uploadingFile}}"
+      >
+    </iron-ajax>
+
+    <style>
+      :host {
+        display: block;
+        box-sizing: border-box;
+      }
+      form {
+        @apply(--layout-vertical);
+      }
+    </style>
+
+    <paper-dialog modal="true" id="file-upload-widget-error-dialog">
+      <h2 id="error-dialog-title">Error</h2>
+      <div id="error-dialog-message">An error occurred. Please try again.</div>
+      <div class="buttons">
+        <paper-button dialog-dismiss>Close</paper-button>
+      </div>
+    </paper-dialog>
+
+    <form is="iron-form" on-iron-form-presubmit="_uploadFile">
+      <paper-input label="[[labelFile]]" type="file" name="filecontent" required disabled="[[_uploadingFile]]"></paper-input>
+      <template is="dom-if" if="[[_isSet(labelIdentifier)]]">
+        <paper-input label="[[labelIdentifier]]" type="text" name="identifier" value="{{identifier}}" placeholder="must be unique" disabled="[[_uploadingFile]]"></paper-input>
+      </template>
+      <template is="dom-if" if="[[_isSet(labelShareWithGroup)]]">
+        <paper-input label="[[labelShareWithGroup]]" type="text" name="sharewithgroup" value="{{shareWithGroup}}" placeholder="enter group id" disabled="[[_uploadingFile]]"></paper-input>
+      </template>
+      <template is="dom-if" if="[[_isSet(labelDescription)]]">
+        <paper-textarea label="[[labelDescription]]" type="text" name="description" value="{{description}}" rows="3" disabled="[[_uploadingFile]]"></paper-textarea>
+      </template>
+      <template is="dom-if" if="[[_isSet(labelExcludeFromIndex)]]">
+        <paper-toggle-button name="excludefromindex" checked="{{excludeFromIndex}}" disabled="[[_uploadingFile]]">[[labelExcludeFromIndex]]</paper-toggle-button>
+      </template>
+      <paper-button on-click="_submitButton" disabled="[[_uploadingFile]]">[[labelUploadButton]]</paper-button>
+    </form>
+
+  </template>
+
+  <script>
+    Polymer({
+      is: 'las2peer-file-upload-widget',
+
+      properties: {
+        /**
+         * The protocol, hostname and port of a las2peer WebConnector in a las2peer network to upload to.
+         */
+        baseUrl: {
+          type: String,
+          value: 'http://localhost:14580/',
+        },
+        /**
+         * The service URL used by this widget. Computed from the base url and service name.
+         * Can be used to simply generate download or view links in the response callback.
+         */
+        serviceUrl:  {
+          type: String,
+          computed: '_computeServiceUrl(baseUrl)'
+        },
+        loginName: {
+          type: String,
+          value: null
+        },
+        loginPassword: {
+          type: String,
+          value: null
+        },
+        loginOidcToken: {
+          type: String,
+          value: null
+        },
+        loginOidcProvider: {
+          type: String,
+          value: null
+        },
+        /**
+         * The label used for the file select input element.
+         */
+        labelFile: {
+          type: String,
+          value: 'Select a file'
+        },
+        /**
+         * The label used for the identifier input element.
+         *
+         * If set to "" (empty value), the input element is hidden.
+         */
+        labelIdentifier: {
+          type: String,
+          value: 'Identifier (optional, default: hashed filename)'
+        },
+        /**
+         * A string used to identify the file.
+         *
+         * Must not start with a slash, must not end with a slash and must not contain double slashes.
+         *
+         * If empty or null the hashed filename is used as identifier.
+         */
+        identifier: {
+          type: String,
+          value: ''
+        },
+        /**
+         * The label used for the share with group input element.
+         *
+         * If set to "" (empty value), the input element is hidden.
+         */
+        labelShareWithGroup: {
+          type: String,
+          value: 'Share with group (optional)'
+        },
+        /**
+         * A group id to use as owner of the uploaded file. This gives anyone in the group read and write permission to the file. The uploading agent must be member of the given group.
+         */
+        shareWithGroup: {
+          type: String,
+          value: ''
+        },
+        /**
+         * The label used for the description input element.
+         *
+         * If set to "" (empty value), the input element is hidden.
+         */
+        labelDescription: {
+          type: String,
+          value: 'Description (optional)'
+        },
+        /**
+         * A description for the file. Same value as in the description input field.
+         */
+        description: {
+          type: String,
+          value: ''
+        },
+        /**
+         * The label used for the "exclude from index" toggle element.
+         *
+         * If set to "" (empty value), the input element is hidden.
+         */
+        labelExcludeFromIndex: {
+          type: String,
+          value: 'Exclude from index listing'
+        },
+        /**
+         * If true, the file is not listed in the global file index listing.
+         */
+        excludeFromIndex: {
+          type: Boolean,
+          value: false
+        },
+        /**
+         * The label used for the upload button.
+         */
+        labelUploadButton: {
+          type: String,
+          value: 'Upload file'
+        },
+        /**
+         * A callback function that is called after an successful upload.
+         * 
+         * The service response value is given as only parameter. See service documentation for details.
+         */
+        uploadSuccessCallback: {
+          type: Object,
+          value: null
+        },
+        _requestHeaders: {
+          type: Object,
+          computed: '_computeHeaders(loginName,loginPassword,loginOidcToken,loginOidcProvider)'
+        },
+        _uploadingFile: {
+          type: Boolean,
+          value: false
+        },
+      },
+
+      // Element behavior
+
+      _computeServiceUrl: function(base) {
+        if (!base.endsWith('/')) {
+          base = base + '/';
+        }
+        return base + "fileservice";
+      },
+
+      _computeHeaders: function(loginName,loginPassword,loginOidcToken,loginOidcProvider) {
+        var headers = {};
+
+        if (loginName != null && loginPassword != null) {
+          headers["Authorization"] = "Basic " + btoa(loginName + ":" + loginPassword);
+        }
+        else if(loginOidcToken != null) {
+          headers["access_token"] = loginOidcToken;
+
+          if (loginOidcProvider != null) {
+            headers["oidc_provider"] = loginOidcProvider;
+          }
+        }
+
+        return headers;
+      },
+
+      _isSet(val) {
+        if (val) {
+          return true;
+        } else {
+          return false;
+        }
+      },
+
+      _submitButton(event) {
+        Polymer.dom(event).localTarget.parentElement.submit();
+      },
+
+      // Data processing
+
+      _receiveFileUpload(event) {
+        var response = event.target.lastResponse;
+//        console.log("upload successful: " + response);
+        this.querySelector('form').reset();
+        if (this.uploadSuccessCallback) {
+          window[this.uploadSuccessCallback](response);
+        }
+      },
+
+      // Send requests
+
+      _uploadFile(event) {
+        event.preventDefault()
+        var form = Polymer.dom(event).localTarget;
+        var ajaxUploadFile = this.$.ajaxUploadFile;
+        var formData = new FormData();
+        formData.append(form.elements.filecontent.name, form.elements.filecontent.files[0]);
+        formData.append(form.elements.identifier.name, this.identifier);
+        formData.append(form.elements.sharewithgroup.name, this.shareWithGroup);
+        formData.append(form.elements.description.name, this.description);
+        formData.append(form.querySelector('[name=excludefromindex]').name, this.excludeFromIndex);
+        ajaxUploadFile.body = formData;
+        ajaxUploadFile.generateRequest();
+      },
+
+      // Error handling
+
+      _handleError(event) {
+        var errorDialog = document.querySelector('#file-upload-widget-error-dialog');
+        var errorDialogTitle = errorDialog.querySelector('#error-dialog-title');
+        var errorDialogMessage = errorDialog.querySelector('#error-dialog-message');
+
+        errorDialogTitle.innerHTML = event.detail.error;
+        if (event.detail.request.xhr.readyState == 4 && event.detail.request.xhr.status == 0) { // network issues
+          errorDialogTitle.innerHTML = 'Network Connection Error';
+          errorDialogMessage.innerHTML = 'Could not connect to:<br />' + event.detail.request.url;
+        }
+        else {
+          console.log(event);
+          var response = event.detail.request.response;
+          if (response) {
+            errorDialogMessage.innerHTML = response.replace(/(?:\r\n|\r|\n)/g, '<br />');
+          }
+          else {
+            errorDialogMessage.innerHTML = 'An error occurred. Please try again.';
+            errorDialogMessage.innerHTML = event.detail.request.xhr.response;
+          }
+        }
+        errorDialog.open();
+      },
+
+    });
+  </script>
+
+</dom-module>
