@@ -1,5 +1,9 @@
-<link rel="import" href="../polymer/polymer.html">
+<!--
+@license
+Copyright (c) 2017 Advanced Community Information Systems (ACIS) Group, Chair of Computer Science 5 (Databases & Information Systems), RWTH Aachen University, Germany
+-->
 
+<link rel="import" href="../polymer/polymer-element.html">
 <link rel="import" href="../iron-ajax/iron-ajax.html">
 <link rel="import" href="../paper-dialog/paper-dialog.html">
 <link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
@@ -8,7 +12,6 @@
 <link rel="import" href="../paper-input/paper-textarea.html">
 <link rel="import" href="../paper-toggle-button/paper-toggle-button.html">
 <link rel="import" href="../paper-button/paper-button.html">
-
 
 <!--
 Provides an upload form for the las2peer file service.
@@ -37,61 +40,52 @@ Example with custom success callback function:
 
 <dom-module id="las2peer-file-upload-widget">
   <template>
-
     <iron-ajax id="ajaxUploadFile"
-        url='[[serviceUrl]]/files'
-        method='POST'
-        params='{}'
-        handle-as="text"
+        url="[[serviceUrl]]/files"
+        method="POST"
+        handle-as="json"
         on-response="_receiveFileUpload"
         on-error="_handleError"
-        headers = '[[_requestHeaders]]'
-        loading = "{{_uploadingFile}}"
-      >
-    </iron-ajax>
-
+        headers = "[[_requestHeaders]]"
+        loading = "{{_uploadingFile}}"></iron-ajax>
     <style>
       :host {
-        display: block;
-        box-sizing: border-box;
-      }
-      form {
-        @apply(--layout-vertical);
+        display: inline-block;
       }
     </style>
 
-    <paper-dialog modal="true" id="file-upload-widget-error-dialog">
-      <h2 id="error-dialog-title">Error</h2>
-      <div id="error-dialog-message">An error occurred. Please try again.</div>
+    <paper-dialog id="errorDialog">
+      <h2 id="errorDialogTitle">Error</h2>
+      <div id="errorDialogMessage">An error occurred. Please try again.</div>
       <div class="buttons">
-        <paper-button dialog-dismiss>Close</paper-button>
+        <paper-button dialog-dismiss>OK</paper-button>
       </div>
     </paper-dialog>
 
-    <form is="iron-form" on-iron-form-presubmit="_uploadFile">
-      <paper-input label="[[labelFile]]" type="file" name="filecontent" required disabled="[[_uploadingFile]]"></paper-input>
-      <template is="dom-if" if="[[_isSet(labelIdentifier)]]">
-        <paper-input label="[[labelIdentifier]]" type="text" name="identifier" value="{{identifier}}" placeholder="must be unique" disabled="[[_uploadingFile]]"></paper-input>
-      </template>
-      <template is="dom-if" if="[[_isSet(labelShareWithGroup)]]">
-        <paper-input label="[[labelShareWithGroup]]" type="text" name="sharewithgroup" value="{{shareWithGroup}}" placeholder="enter group id" disabled="[[_uploadingFile]]"></paper-input>
-      </template>
-      <template is="dom-if" if="[[_isSet(labelDescription)]]">
-        <paper-textarea label="[[labelDescription]]" type="text" name="description" value="{{description}}" rows="3" disabled="[[_uploadingFile]]"></paper-textarea>
-      </template>
-      <template is="dom-if" if="[[_isSet(labelExcludeFromIndex)]]">
-        <paper-toggle-button name="excludefromindex" checked="{{excludeFromIndex}}" disabled="[[_uploadingFile]]">[[labelExcludeFromIndex]]</paper-toggle-button>
-      </template>
-      <paper-button on-click="_submitButton" disabled="[[_uploadingFile]]">[[labelUploadButton]]</paper-button>
-    </form>
-
+    <iron-form id="uploadForm" on-iron-form-presubmit="_uploadFile">
+      <form id="realForm">
+        <paper-input label="[[labelFile]]" type="file" name="filecontent" disabled="[[_uploadingFile]]"></paper-input>
+        <template is="dom-if" if="[[_isSet(labelIdentifier)]]">
+          <paper-input label="[[labelIdentifier]]" type="text" name="identifier" value="{{identifier}}" placeholder="must be unique" disabled="[[_uploadingFile]]"></paper-input>
+        </template>
+        <template is="dom-if" if="[[_isSet(labelShareWithGroup)]]">
+          <paper-input label="[[labelShareWithGroup]]" type="text" name="sharewithgroup" value="{{shareWithGroup}}" placeholder="enter group id" disabled="[[_uploadingFile]]"></paper-input>
+        </template>
+        <template is="dom-if" if="[[_isSet(labelDescription)]]">
+          <paper-textarea label="[[labelDescription]]" type="text" name="description" value="{{description}}" rows="3" disabled="[[_uploadingFile]]"></paper-textarea>
+        </template>
+        <template is="dom-if" if="[[_isSet(labelExcludeFromIndex)]]">
+          <paper-toggle-button name="excludefromindex" checked="{{excludeFromIndex}}" disabled="[[_uploadingFile]]">[[labelExcludeFromIndex]]</paper-toggle-button>
+        </template>
+        <paper-button raised on-click="_submitButton" disabled="[[_uploadingFile]]">[[labelUploadButton]]</paper-button>
+      </form>
+    </iron-form>
   </template>
 
   <script>
-    Polymer({
-      is: 'las2peer-file-upload-widget',
-
-      properties: {
+    class FileUploadWidget extends Polymer.Element {
+      static get is() { return "las2peer-file-upload-widget"; }
+      static get properties() { return {
         /**
          * The protocol, hostname and port of a las2peer WebConnector in a las2peer network to upload to.
          */
@@ -222,18 +216,16 @@ Example with custom success callback function:
           type: Boolean,
           value: false
         },
-      },
+      }; }
 
-      // Element behavior
-
-      _computeServiceUrl: function(base) {
+      _computeServiceUrl(base) {
         if (!base.endsWith('/')) {
           base = base + '/';
         }
         return base + "fileservice";
-      },
+      }
 
-      _computeHeaders: function(loginName,loginPassword,loginOidcToken,loginOidcProvider) {
+      _computeHeaders(loginName,loginPassword,loginOidcToken,loginOidcProvider) {
         var headers = {};
 
         if (loginName != null && loginPassword != null) {
@@ -248,7 +240,7 @@ Example with custom success callback function:
         }
 
         return headers;
-      },
+      }
 
       _isSet(val) {
         if (val) {
@@ -256,66 +248,51 @@ Example with custom success callback function:
         } else {
           return false;
         }
-      },
+      }
 
       _submitButton(event) {
-        Polymer.dom(event).localTarget.parentElement.submit();
-      },
+        this.$.uploadForm.submit();
+      }
 
-      // Data processing
+      _uploadFile(event) {
+        event.preventDefault();
+        var form = this.shadowRoot.querySelector('#uploadForm');
+        var formData = new FormData();
+        formData.append(form.querySelector('[name=filecontent]').name, form.querySelector('[name=filecontent]').inputElement.inputElement.files[0]);
+        formData.append(form.querySelector('[name=identifier]').name, this.identifier);
+        formData.append(form.querySelector('[name=sharewithgroup]').name, this.shareWithGroup);
+        formData.append(form.querySelector('[name=description]').name, this.description);
+        formData.append(form.querySelector('[name=excludefromindex]').name, this.excludeFromIndex);
+        var ajaxUploadFile = this.$.ajaxUploadFile;
+        ajaxUploadFile.body = formData;
+        ajaxUploadFile.generateRequest();
+      }
 
       _receiveFileUpload(event) {
         var response = event.target.lastResponse;
-//        console.log("upload successful: " + response);
+        console.log("upload successful: " + response);
         this.querySelector('form').reset();
         if (this.uploadSuccessCallback) {
           window[this.uploadSuccessCallback](response);
         }
-      },
-
-      // Send requests
-
-      _uploadFile(event) {
-        event.preventDefault()
-        var form = Polymer.dom(event).localTarget;
-        var ajaxUploadFile = this.$.ajaxUploadFile;
-        var formData = new FormData();
-        formData.append(form.elements.filecontent.name, form.elements.filecontent.files[0]);
-        formData.append(form.elements.identifier.name, this.identifier);
-        formData.append(form.elements.sharewithgroup.name, this.shareWithGroup);
-        formData.append(form.elements.description.name, this.description);
-        formData.append(form.querySelector('[name=excludefromindex]').name, this.excludeFromIndex);
-        ajaxUploadFile.body = formData;
-        ajaxUploadFile.generateRequest();
-      },
-
-      // Error handling
+      }
 
       _handleError(event) {
-        var errorDialog = document.querySelector('#file-upload-widget-error-dialog');
-        var errorDialogTitle = errorDialog.querySelector('#error-dialog-title');
-        var errorDialogMessage = errorDialog.querySelector('#error-dialog-message');
-
-        errorDialogTitle.innerHTML = event.detail.error;
-        if (event.detail.request.xhr.readyState == 4 && event.detail.request.xhr.status == 0) { // network issues
-          errorDialogTitle.innerHTML = 'Network Connection Error';
-          errorDialogMessage.innerHTML = 'Could not connect to:<br />' + event.detail.request.url;
+        var xhr = event.detail.request.xhr;
+        if (xhr.readyState == 4 && xhr.status == 0) { // network issues
+          this.$.errorDialogTitle.innerHTML = 'Network Connection Error';
+          this.$.errorDialogMessage.innerHTML = 'Could not connect to:<br />' + event.detail.request.url;
         }
-        else {
-          console.log(event);
-          var response = event.detail.request.response;
-          if (response) {
-            errorDialogMessage.innerHTML = response.replace(/(?:\r\n|\r|\n)/g, '<br />');
-          }
-          else {
-            errorDialogMessage.innerHTML = 'An error occurred. Please try again.';
-            errorDialogMessage.innerHTML = event.detail.request.xhr.response;
-          }
+        else if (xhr.response) {
+          console.log(xhr.response);
+          this.$.errorDialogTitle.innerHTML = xhr.response.message;
+          this.$.errorDialogMessage.innerHTML = xhr.response.stackTrace.join('<br />');
         }
-        errorDialog.open();
-      },
+        this.$.errorDialog.open();
+      }
 
-    });
+    }
+    customElements.define(FileUploadWidget.is, FileUploadWidget);
   </script>
-
 </dom-module>
+

@@ -1,0 +1,56 @@
+<link rel="import" href="../../polymer/polymer.html">
+<link rel="import" href="../las2peer-file-upload-widget.html">
+
+<dom-module id="demo-element">
+  <template>
+    <style>
+      :host {
+        font-family: sans-serif;
+      };
+    </style>
+
+    <h1><code>&lt;las2peer-file-upload-widget&gt;</code> Demo</h1>
+
+    <p>Authentication
+      <select on-change="setUser" id="userSelector">
+        <option value="anonymous">anonymous</option>
+        <option value="User A">User A</option>
+        <option value="User B">User B</option>
+        <option value="User C">User C</option>
+        <option value="User D">User D</option>
+      </select>
+    </p>
+
+    <las2peer-file-upload-widget id="uploadwidget" upload-success-callback="uploadSuccess"></las2peer-file-upload-widget>
+
+  </template>
+
+  <script>
+    class DemoElement extends Polymer.Element {
+      static get is() { return "demo-element" }
+
+      ready() { super.ready(); this.setUser(); }
+
+      setUser() {
+        var userPass = {
+          "anonymous": "anonymous",
+          "User A": "userAPass",
+          "User B": "userBPass",
+          "User C": "userCPass",
+          "User D": "userDPass",
+        };
+        var userSelector = this.$.userSelector;
+        var currentUser = userSelector.options[userSelector.selectedIndex].value;
+        var widget = this.$.uploadwidget;
+        widget.setAttribute("login-name", currentUser);
+        widget.setAttribute("login-password", userPass[currentUser]);
+      }
+
+      uploadSuccess(response) {
+        var serviceUrl = document.getElementById("uploadwidget").serviceUrl;
+        alert('File upload successful\nView at ' + serviceUrl + '/files/' + response + '\nDownload at ' + serviceUrl + '/download/' + response);
+      }
+    }
+    customElements.define(DemoElement.is, DemoElement);
+  </script>
+</dom-module>
