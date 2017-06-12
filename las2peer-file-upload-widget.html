@@ -6,7 +6,6 @@ Copyright (c) 2017 Advanced Community Information Systems (ACIS) Group, Chair of
 <link rel="import" href="../polymer/polymer-element.html">
 <link rel="import" href="../iron-ajax/iron-ajax.html">
 <link rel="import" href="../paper-dialog/paper-dialog.html">
-<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
 <link rel="import" href="../iron-form/iron-form.html">
 <link rel="import" href="../paper-input/paper-input.html">
 <link rel="import" href="../paper-input/paper-textarea.html">
@@ -43,14 +42,15 @@ Example with custom success callback function:
     <iron-ajax id="ajaxUploadFile"
         url="[[serviceUrl]]/files"
         method="POST"
-        handle-as="json"
+        handle-as="text"
         on-response="_receiveFileUpload"
         on-error="_handleError"
-        headers = "[[_requestHeaders]]"
+        headers=[[las2peerAuthHeader]]
         loading = "{{_uploadingFile}}"></iron-ajax>
     <style>
       :host {
         display: inline-block;
+        padding: 0.5em;
       }
     </style>
 
@@ -84,14 +84,18 @@ Example with custom success callback function:
 
   <script>
     class FileUploadWidget extends Polymer.Element {
-      static get is() { return "las2peer-file-upload-widget"; }
+      static get is() { return 'las2peer-file-upload-widget'; }
       static get properties() { return {
         /**
          * The protocol, hostname and port of a las2peer WebConnector in a las2peer network to upload to.
          */
-        baseUrl: {
+        las2peerConnectorEndpoint: {
           type: String,
           value: 'http://localhost:14580/',
+        },
+        las2peerAuthHeader: {
+          type: Object,
+          value: {},
         },
         /**
          * The service URL used by this widget. Computed from the base url and service name.
@@ -99,23 +103,7 @@ Example with custom success callback function:
          */
         serviceUrl:  {
           type: String,
-          computed: '_computeServiceUrl(baseUrl)'
-        },
-        loginName: {
-          type: String,
-          value: null
-        },
-        loginPassword: {
-          type: String,
-          value: null
-        },
-        loginOidcToken: {
-          type: String,
-          value: null
-        },
-        loginOidcProvider: {
-          type: String,
-          value: null
+          computed: '_computeServiceUrl(las2peerConnectorEndpoint)'
         },
         /**
          * The label used for the file select input element.
@@ -208,10 +196,6 @@ Example with custom success callback function:
           type: Object,
           value: null
         },
-        _requestHeaders: {
-          type: Object,
-          computed: '_computeHeaders(loginName,loginPassword,loginOidcToken,loginOidcProvider)'
-        },
         _uploadingFile: {
           type: Boolean,
           value: false
@@ -222,24 +206,7 @@ Example with custom success callback function:
         if (!base.endsWith('/')) {
           base = base + '/';
         }
-        return base + "fileservice";
-      }
-
-      _computeHeaders(loginName,loginPassword,loginOidcToken,loginOidcProvider) {
-        var headers = {};
-
-        if (loginName != null && loginPassword != null) {
-          headers["Authorization"] = "Basic " + btoa(loginName + ":" + loginPassword);
-        }
-        else if(loginOidcToken != null) {
-          headers["access_token"] = loginOidcToken;
-
-          if (loginOidcProvider != null) {
-            headers["oidc_provider"] = loginOidcProvider;
-          }
-        }
-
-        return headers;
+        return base + "rmi/i5.las2peer.services.fileService.FileService/2.0";
       }
 
       _isSet(val) {
@@ -258,11 +225,11 @@ Example with custom success callback function:
         event.preventDefault();
         var form = this.shadowRoot.querySelector('#uploadForm');
         var formData = new FormData();
-        formData.append(form.querySelector('[name=filecontent]').name, form.querySelector('[name=filecontent]').inputElement.inputElement.files[0]);
-        formData.append(form.querySelector('[name=identifier]').name, this.identifier);
-        formData.append(form.querySelector('[name=sharewithgroup]').name, this.shareWithGroup);
-        formData.append(form.querySelector('[name=description]').name, this.description);
-        formData.append(form.querySelector('[name=excludefromindex]').name, this.excludeFromIndex);
+        formData.append('filecontent', form.querySelector('[name=filecontent]').inputElement.inputElement.files[0]);
+        formData.append('identifier', this.identifier);
+        formData.append('sharewithgroup', this.shareWithGroup);
+        formData.append('description', this.description);
+        formData.append('excludefromindex', this.excludeFromIndex);
         var ajaxUploadFile = this.$.ajaxUploadFile;
         ajaxUploadFile.body = formData;
         ajaxUploadFile.generateRequest();
@@ -271,7 +238,7 @@ Example with custom success callback function:
       _receiveFileUpload(event) {
         var response = event.target.lastResponse;
         console.log("upload successful: " + response);
-        this.querySelector('form').reset();
+        this.shadowRoot.querySelector('#uploadForm').reset();
         if (this.uploadSuccessCallback) {
           window[this.uploadSuccessCallback](response);
         }

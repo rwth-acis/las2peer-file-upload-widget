@@ -1,6 +1,7 @@
 {
   "name": "las2peer-file-upload-widget",
   "version": "0.2.0",
+  "authors": [ "Thomas Cujé <dev.cuje@freenet.de>" ],
   "homepage": "https://github.com/rwth-acis/las2peer-file-upload-widget",
   "license": "BSD3",
   "ignore": [
@@ -12,9 +13,9 @@
   ],
   "dependencies": {
     "polymer": "Polymer/polymer#^2.0.0",
+    "iron-ajax": "PolymerElements/iron-ajax#^2.0.0",
     "paper-dialog": "PolymerElements/paper-dialog#^2.0.0",
-    "iron-flex-layout": "PolymerElements/iron-flex-layout#^2.0.0",
-    "iron-form": "tcuje/iron-form#2.0-preview",
+    "iron-form": "PolymerElements/iron-form#2.0-preview",
     "paper-input": "PolymerElements/paper-input#^2.0.0",
     "paper-toggle-button": "PolymerElements/paper-toggle-button#^2.0.0",
     "paper-button": "PolymerElements/paper-button#^2.0.0"
