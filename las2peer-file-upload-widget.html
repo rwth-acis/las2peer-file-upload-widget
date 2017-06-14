@@ -40,12 +40,11 @@ Example with custom success callback function:
 <dom-module id="las2peer-file-upload-widget">
   <template>
     <iron-ajax id="ajaxUploadFile"
-        url="[[serviceUrl]]/files"
+        url="/rmi/i5.las2peer.services.fileService.FileService/2.1/files"
         method="POST"
         handle-as="text"
         on-response="_receiveFileUpload"
         on-error="_handleError"
-        headers=[[las2peerAuthHeader]]
         loading = "{{_uploadingFile}}"></iron-ajax>
     <style>
       :host {
@@ -86,25 +85,6 @@ Example with custom success callback function:
     class FileUploadWidget extends Polymer.Element {
       static get is() { return 'las2peer-file-upload-widget'; }
       static get properties() { return {
-        /**
-         * The protocol, hostname and port of a las2peer WebConnector in a las2peer network to upload to.
-         */
-        las2peerConnectorEndpoint: {
-          type: String,
-          value: 'http://localhost:14580/',
-        },
-        las2peerAuthHeader: {
-          type: Object,
-          value: {},
-        },
-        /**
-         * The service URL used by this widget. Computed from the base url and service name.
-         * Can be used to simply generate download or view links in the response callback.
-         */
-        serviceUrl:  {
-          type: String,
-          computed: '_computeServiceUrl(las2peerConnectorEndpoint)'
-        },
         /**
          * The label used for the file select input element.
          */
@@ -201,13 +181,6 @@ Example with custom success callback function:
           value: false
         },
       }; }
-
-      _computeServiceUrl(base) {
-        if (!base.endsWith('/')) {
-          base = base + '/';
-        }
-        return base + "rmi/i5.las2peer.services.fileService.FileService/2.0";
-      }
 
       _isSet(val) {
         if (val) {
