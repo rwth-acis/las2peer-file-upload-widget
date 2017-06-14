@@ -19,5 +19,8 @@ sudo npm install -g polyserve
 # Build Element
 
 ```Shell
-polymer build --bundle --entrypoint las2peer-file-upload-widget.html
+polymer build
 ```
+
+Check polymer.json file for build details.
+
