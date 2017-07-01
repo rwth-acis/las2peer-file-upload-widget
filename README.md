@@ -15,12 +15,3 @@ sudo npm install -g bower
 ```Shell
 sudo npm install -g polyserve
 ```
-
-# Build Element
-
-```Shell
-polymer build
-```
-
-Check polymer.json file for build details.
-

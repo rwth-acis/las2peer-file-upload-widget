@@ -1,9 +1,10 @@
 {
   "name": "las2peer-file-upload-widget",
-  "version": "0.2.0",
+  "version": "2.1.0",
   "authors": [ "Thomas Cujé <dev.cuje@freenet.de>" ],
+  "private": true,
+  "license": "https://github.com/rwth-acis/las2peer-file-upload-widget/blob/master/LICENSE",
   "homepage": "https://github.com/rwth-acis/las2peer-file-upload-widget",
-  "license": "BSD3",
   "ignore": [
     "**/.*",
     "node_modules",

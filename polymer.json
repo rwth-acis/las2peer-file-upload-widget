@@ -1,6 +1,0 @@
-{
-  "entrypoint": "las2peer-file-upload-widget.html",
-  "builds": [{
-    "bundle": true
-  }]
-}
